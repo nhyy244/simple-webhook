@@ -10,4 +10,4 @@ wheels/
 .venv
 
 #storage
-webhooks.txt
+webhook_subscriptions.txt
