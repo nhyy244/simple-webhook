@@ -8,7 +8,9 @@ app = FastAPI()
 
 @app.post("/webhook")
 def webhook(webhook_payload: WebhookPayload):
-    return None
+    with open("received_events.txt", "a") as file:
+        file.write(f"{webhook_payload.model_dump_json()}\n")
+    return f"Received webhook payload: {webhook_payload}"
 
 
 if __name__ == "__main__":

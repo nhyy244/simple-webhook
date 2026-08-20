@@ -1,7 +1,9 @@
+import uuid
 from enum import Enum
 from pathlib import Path
 from uuid import UUID
 
+import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -48,12 +50,51 @@ class Pair(BaseModel):
 
 @app.post("/add", response_model=int)
 def add(number_pair: Pair):
-    return number_pair.a + number_pair.b
+    webhook_subscriptions_file = Path("webhook_subscriptions.txt")
+    if webhook_subscriptions_file.exists():
+        with open(webhook_subscriptions_file, "r") as file:
+            lines = file.readlines()
+
+        for line in lines:
+            if not line.strip():
+                continue
+            webhook_sub = WebhookSubscriptionRequest.model_validate_json(line)
+            for e in webhook_sub.events:
+                if e.name.value == EventName.ADD.value:
+                    sum = number_pair.a + number_pair.b
+                    webhook_response = WebhookPayload(
+                        event=EventResponse(name=EventName.ADD, id=uuid.uuid1()),
+                        description=f"{EventName.ADD} event received. sum of {number_pair.a} and {number_pair.b} is {sum}",
+                    )
+                    requests.post(
+                        webhook_sub.url, json=webhook_response.model_dump(mode="json")
+                    )
+
+    return sum
 
 
 @app.post("/substract", response_model=int)
 def substract(number_pair: Pair):
-    return number_pair.a - number_pair.b
+    webhook_subscriptions_file = Path("webhook_subscriptions.txt")
+    if webhook_subscriptions_file.exists():
+        with open(webhook_subscriptions_file, "r") as file:
+            lines = file.readlines()
+
+        for line in lines:
+            if not line.strip():
+                continue
+            webhook_sub = WebhookSubscriptionRequest.model_validate_json(line)
+            for e in webhook_sub.events:
+                if e.name.value == EventName.SUBSTRACT.value:
+                    difference = number_pair.a - number_pair.b
+                    webhook_response = WebhookPayload(
+                        event=EventResponse(name=EventName.SUBSTRACT, id=uuid.uuid1()),
+                        description=f"{EventName.SUBSTRACT} event received. Difference of {number_pair.a} and {number_pair.b} is {difference}",
+                    )
+                    requests.post(
+                        webhook_sub.url, json=webhook_response.model_dump(mode="json")
+                    )
+    return difference
 
 
 @app.post("/register-webhook", response_model=WebhookSubscriptionResponse)
